@@ -2,20 +2,18 @@
  * Sprout – "Find It!" Camera Game
  * Task 4 · React Native (Expo)
  *
- * Activity: "Find 5 things at home!" — child snaps everyday objects.
- *           The app labels them with a mock Vision API call and awards
- *           a star sticker for each new find. After 5 finds, a full
- *           celebration screen plays.
- *
  * To run:
  *   npx create-expo-app SproutCamera --template blank-typescript
  *   cd SproutCamera
  *   npx expo install expo-camera expo-haptics react-native-safe-area-context
- *   # Replace App.tsx with this file
+ *   Replace App.tsx with this file, and app.json with the provided app.json
  *   npx expo start
  *
- * For a real deployment swap mockIdentifyObject() with a Google Cloud
- * Vision API call (or any REST vision endpoint).
+ * To build APK:
+ *   npm install -g eas-cli
+ *   npx expo login
+ *   eas init
+ *   eas build -p android --profile preview
  */
 
 import React, { useState, useEffect, useRef } from "react";
@@ -30,14 +28,14 @@ import {
   Image,
   Dimensions,
 } from "react-native";
-import { CameraView, useCameraPermissions } from "expo-camera";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-// ─── Mock Vision API ──────────────────────────────────────────────────────────
-// Replace this function body with a real API call when deploying.
+// ── Mock Vision API ───────────────────────────────────────────────────────────
+// Swap this out with Google Cloud Vision or any REST endpoint when deploying.
 const MOCK_LABELS = [
   "a cup", "a book", "a chair", "a lamp", "a plant",
   "a pillow", "a shoe", "a toy", "a table", "a window",
@@ -45,7 +43,6 @@ const MOCK_LABELS = [
 ];
 
 async function mockIdentifyObject(_photoUri: string): Promise<string> {
-  // Simulate network latency
   await new Promise((r) => setTimeout(r, 1200));
   return MOCK_LABELS[Math.floor(Math.random() * MOCK_LABELS.length)];
 }
@@ -69,15 +66,14 @@ interface Find {
 }
 
 export default function App() {
-  // New SDK 50+ permissions hook — replaces Camera.requestCameraPermissionsAsync()
   const [permission, requestPermission] = useCameraPermissions();
-
-  const [phase, setPhase] = useState<"intro" | "camera" | "analysing" | "result" | "complete">("intro");
+  const [phase, setPhase] = useState<
+    "intro" | "camera" | "analysing" | "result" | "complete"
+  >("intro");
   const [finds, setFinds] = useState<Find[]>([]);
   const [lastFind, setLastFind] = useState<Find | null>(null);
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
 
-  // CameraView ref — type updated from Camera to CameraView
   const cameraRef = useRef<CameraView>(null);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -85,27 +81,46 @@ export default function App() {
 
   useEffect(() => {
     if (phase === "result" || phase === "complete") {
-      Animated.sequence([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.spring(bounceAnim, { toValue: 1, friction: 4, tension: 80, useNativeDriver: true }),
-      ]).start();
-    } else {
       fadeAnim.setValue(0);
       bounceAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(bounceAnim, {
+          toValue: 1,
+          friction: 4,
+          tension: 80,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
   }, [phase]);
 
   async function takePhoto() {
     if (!cameraRef.current) return;
 
-    // Button press animation
     Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.88, duration: 80, useNativeDriver: true }),
-      Animated.spring(scaleAnim, { toValue: 1, friction: 3, useNativeDriver: true }),
+      Animated.timing(scaleAnim, {
+        toValue: 0.88,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 3,
+        useNativeDriver: true,
+      }),
     ]).start();
 
     try {
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.5, base64: false });
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.5,
+        base64: false,
+      });
+
       if (!photo) return;
 
       setCapturedUri(photo.uri);
@@ -147,20 +162,19 @@ export default function App() {
     setPhase("intro");
   }
 
-  // ── Permission: not yet asked ──────────────────────────────────────────────
-  // permission is null while the hook is loading — show nothing yet
+  // ── Permission not yet determined ─────────────────────────────────────────
   if (!permission) {
-    return <View style={{ flex: 1, backgroundColor: "#FFF8E7" }} />;
+    return <View style={styles.centred} />;
   }
 
-  // ── Permission denied ──────────────────────────────────────────────────────
+  // ── Permission denied ─────────────────────────────────────────────────────
   if (!permission.granted) {
     return (
-      <SafeAreaView style={styles.centred}>
+      <SafeAreaView style={[styles.centred, { backgroundColor: "#FFF8E7" }]}>
         <Text style={styles.bigEmoji}>📷</Text>
         <Text style={styles.title}>Camera access needed!</Text>
         <Text style={styles.body}>
-          Sprouty needs the camera to play Find It!
+          Sprout needs the camera so you can snap things around your home.
         </Text>
         <TouchableOpacity style={styles.bigButton} onPress={requestPermission}>
           <Text style={styles.bigButtonText}>Allow Camera 📷</Text>
@@ -169,31 +183,40 @@ export default function App() {
     );
   }
 
-  // ── Intro ──────────────────────────────────────────────────────────────────
+  // ── Intro ─────────────────────────────────────────────────────────────────
   if (phase === "intro") {
     return (
       <SafeAreaView style={[styles.centred, { backgroundColor: "#FFF8E7" }]}>
         <Text style={{ fontSize: 80 }}>🌱</Text>
         <Text style={styles.title}>Find It!</Text>
         <Text style={styles.subtitle}>
-          Can you find <Text style={{ color: "#6BCB77", fontWeight: "800" }}>{GOAL} things</Text> around your home?
+          Can you find{" "}
+          <Text style={{ color: "#6BCB77", fontWeight: "800" }}>
+            {GOAL} things
+          </Text>{" "}
+          around your home?
         </Text>
-        <Text style={styles.body}>Take a photo of each one and Sprouty will name it for you! 🎉</Text>
-        <TouchableOpacity style={styles.bigButton} onPress={() => setPhase("camera")}>
+        <Text style={styles.body}>
+          Take a photo of each one and Sprouty will name it for you! 🎉
+        </Text>
+        <TouchableOpacity
+          style={styles.bigButton}
+          onPress={() => setPhase("camera")}
+        >
           <Text style={styles.bigButtonText}>Let's Go! 🔍</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
-  // ── Camera ─────────────────────────────────────────────────────────────────
+  // ── Camera ────────────────────────────────────────────────────────────────
   if (phase === "camera") {
     return (
       <View style={{ flex: 1, backgroundColor: "#000" }}>
-        {/* CameraView with no children — SDK 50+ requirement */}
+        {/* CameraView fills the screen — no children inside it (SDK 50+ requirement) */}
         <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
 
-        {/* HUD — absolutely positioned OVER the camera, outside CameraView */}
+        {/* HUD absolutely positioned OVER the camera, outside CameraView */}
         <SafeAreaView style={styles.cameraHud}>
           <View style={styles.progressRow}>
             {Array.from({ length: GOAL }).map((_, i) => (
@@ -203,11 +226,12 @@ export default function App() {
             ))}
           </View>
           <Text style={styles.cameraPrompt}>
-            Find {GOAL - finds.length} more thing{GOAL - finds.length !== 1 ? "s" : ""}!
+            Find {GOAL - finds.length} more thing
+            {GOAL - finds.length !== 1 ? "s" : ""}!
           </Text>
         </SafeAreaView>
 
-        {/* Shutter — absolutely positioned OVER the camera, outside CameraView */}
+        {/* Shutter absolutely positioned OVER the camera, outside CameraView */}
         <View style={styles.shutterRow}>
           <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
             <TouchableOpacity style={styles.shutter} onPress={takePhoto}>
@@ -219,7 +243,7 @@ export default function App() {
     );
   }
 
-  // ── Analysing ──────────────────────────────────────────────────────────────
+  // ── Analysing ─────────────────────────────────────────────────────────────
   if (phase === "analysing") {
     return (
       <SafeAreaView style={[styles.centred, { backgroundColor: "#E8F8FF" }]}>
@@ -236,11 +260,17 @@ export default function App() {
     );
   }
 
-  // ── Result (one find) ──────────────────────────────────────────────────────
+  // ── Result ────────────────────────────────────────────────────────────────
   if (phase === "result" && lastFind) {
     return (
       <SafeAreaView style={[styles.centred, { backgroundColor: "#FFF0FA" }]}>
-        <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: bounceAnim }], alignItems: "center" }}>
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ scale: bounceAnim }],
+            alignItems: "center",
+          }}
+        >
           <Image
             source={{ uri: lastFind.uri }}
             style={{ width: 220, height: 220, borderRadius: 20, marginBottom: 16 }}
@@ -252,18 +282,25 @@ export default function App() {
             {finds.length} of {GOAL} found
           </Text>
         </Animated.View>
-        <TouchableOpacity style={[styles.bigButton, { marginTop: 28 }]} onPress={continueHunt}>
+        <TouchableOpacity
+          style={[styles.bigButton, { marginTop: 28 }]}
+          onPress={continueHunt}
+        >
           <Text style={styles.bigButtonText}>Find more! 🔍</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
-  // ── Complete ───────────────────────────────────────────────────────────────
+  // ── Complete ──────────────────────────────────────────────────────────────
   if (phase === "complete") {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#FFF8E7" }}>
-        <Animated.View style={{ opacity: fadeAnim, alignItems: "center", paddingTop: 40 }}>
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: "#FFF8E7" }}
+      >
+        <Animated.View
+          style={{ opacity: fadeAnim, alignItems: "center", paddingTop: 40 }}
+        >
           <Text style={{ fontSize: 72 }}>🏆</Text>
           <Text style={[styles.title, { fontSize: 30 }]}>Amazing Explorer!</Text>
           <Text style={styles.subtitle}>You found all {GOAL} things!</Text>
@@ -275,19 +312,29 @@ export default function App() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, gap: 12, paddingBottom: 8 }}
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            gap: 12,
+            paddingBottom: 8,
+          }}
           style={{ maxHeight: 180, marginTop: 8 }}
         >
           {finds.map((f, i) => (
             <View key={i} style={styles.findCard}>
-              <Image source={{ uri: f.uri }} style={{ width: 110, height: 110, borderRadius: 14 }} />
+              <Image
+                source={{ uri: f.uri }}
+                style={{ width: 110, height: 110, borderRadius: 14 }}
+              />
               <Text style={styles.findLabel}>{f.label}</Text>
             </View>
           ))}
         </ScrollView>
 
         <View style={{ alignItems: "center", marginTop: 24 }}>
-          <TouchableOpacity style={[styles.bigButton, { backgroundColor: "#FF6B6B" }]} onPress={restart}>
+          <TouchableOpacity
+            style={[styles.bigButton, { backgroundColor: "#FF6B6B" }]}
+            onPress={restart}
+          >
             <Text style={styles.bigButtonText}>Play Again! 🔄</Text>
           </TouchableOpacity>
         </View>
@@ -298,7 +345,7 @@ export default function App() {
   return null;
 }
 
-// ── Styles ───────────────────────────────────────────────────────────────────
+// ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   centred: {
     flex: 1,
@@ -350,10 +397,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   cameraHud: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
     alignItems: "center",
     paddingTop: 20,
     backgroundColor: "rgba(0,0,0,0.35)",
