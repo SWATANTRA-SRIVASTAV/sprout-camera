@@ -39,5 +39,3 @@ yarn-error.*
 # generated native folders
 /ios
 /android
-# Google Play Service Account
-plucky-point-499110-t6-d26492b432ee.json
