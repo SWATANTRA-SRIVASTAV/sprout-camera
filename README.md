@@ -1,4 +1,5 @@
 # sprout-camera 📷
+📲 [Download APK (Android)](https://github.com/SWATANTRA-SRIVASTAV/sprout-camera/releases/latest) 
 
 A camera-based scavenger hunt for kids. Built with React Native and Expo.
 
