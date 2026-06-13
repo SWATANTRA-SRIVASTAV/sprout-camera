@@ -1,21 +1,3 @@
-/**
- * Sprout – "Find It!" Camera Game
- * Task 4 · React Native (Expo)
- *
- * To run:
- *   npx create-expo-app SproutCamera --template blank-typescript
- *   cd SproutCamera
- *   npx expo install expo-camera expo-haptics react-native-safe-area-context
- *   Replace App.tsx with this file, and app.json with the provided app.json
- *   npx expo start
- *
- * To build APK:
- *   npm install -g eas-cli
- *   npx expo login
- *   eas init
- *   eas build -p android --profile preview
- */
-
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -35,7 +17,7 @@ import * as Haptics from "expo-haptics";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // ── Mock Vision API ───────────────────────────────────────────────────────────
-// Swap this out with Google Cloud Vision or any REST endpoint when deploying.
+
 const MOCK_LABELS = [
   "a cup", "a book", "a chair", "a lamp", "a plant",
   "a pillow", "a shoe", "a toy", "a table", "a window",
