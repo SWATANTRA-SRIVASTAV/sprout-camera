@@ -134,4 +134,5 @@ eas build -p android --profile preview
 ## Author
 
 **Swatantra Srivastav**
+
 Built as part of a mobile app development evaluation for Sprout — a children's learning app for ages 3–8.
